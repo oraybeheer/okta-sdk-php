@@ -4,7 +4,7 @@ namespace Okta\Utilities;
 
 use Lcobucci\JWT\Signer;
 use Okta\Exceptions\Error;
-use Lcobucci\JWT\Signer\Key;
+use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Token\Plain;
 use Okta\Cache\MemoryManager;
 use Lcobucci\JWT\Configuration;
@@ -55,7 +55,7 @@ class PrivateKeyAuthentication {
         $this->memory = new MemoryManager();
         $this->clientId = $clientId;
         $this->scopes = $scopes;
-        $this->privateKey = new Key($privateKey);
+        $this->privateKey = InMemory::plainText($privateKey);
         $this->orgUrl = $orgUrl;
 
         $this->jwtConfig = Configuration::forAsymmetricSigner(
