@@ -20,6 +20,7 @@ namespace Okta\DataStore;
 use Cache\Adapter\Common\CacheItem;
 use function GuzzleHttp\Psr7\build_query;
 use function GuzzleHttp\Psr7\parse_query;
+use GuzzleHttp\Psr7\Header;
 use Http\Client\Common\Plugin\AuthenticationPlugin;
 use Http\Client\Common\PluginClient;
 use Http\Client\HttpClient;
@@ -302,6 +303,29 @@ class DefaultDataStore
         if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
             $error = new Error($result);
             throw new ResourceException($error);
+        }
+
+        // parse the Link header
+        $parsed_link_header = Header::parse($response->getHeader('Link'));
+
+        // filter for rel="next" items
+        $next_link_headers = array_filter(
+            $parsed_link_header,
+            function($item) {
+                return $item['rel'] == 'next';
+            }
+        );
+
+        if (!empty($next_link_headers)) {
+            $next_link_header = reset($next_link_headers);
+            $next_href = $next_link_header[0]; // the link itself is 0 indexed
+            // remove the < and >
+            $next_href = substr($next_href, 1, strlen($next_href) - 2);
+
+            $next_uri = $this->uriFactory->createUri($next_href);
+
+            // follow the next link and merge results
+            $result = array_merge($result, $this->executeRequest($method, $next_uri, $body, $options));
         }
 
         if (!is_array($result)) {
